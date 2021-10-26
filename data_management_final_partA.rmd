@@ -1,0 +1,615 @@
+---
+title: "PartA"
+author: "Group 8"
+date: "10/12/2020"
+output: 
+  pdf_document: 
+    toc: yes
+    number_sections: yes
+header-includes:
+    - \usepackage{hyperref}
+always_allow_html: true
+---
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(RSQLite)
+```
+# Database creation
+First, we created a new database for the Scanco Hotel Group.
+```{r}
+my_connection <- RSQLite::dbConnect(RSQLite::SQLite(), "scanco_group.db")
+```
+
+```{r}
+tables <- RSQLite:: dbListTables(my_connection)
+print(tables)
+```
+
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS hotel;
+```
+
+## Hotel Entity
+```{sql connection= my_connection}
+CREATE TABLE hotel (
+hotel_id VARCHAR(50) NOT NULL PRIMARY KEY,
+floors INT NOT NULL,
+name VARCHAR(255) NOT NULL,
+phone VARCHAR(50) NOT NULL,
+street_address VARCHAR(255) NOT NULL,
+city VARCHAR(255) NOT NULL,
+state VARCHAR(255) NULL,
+zip_code VARCHAR(255) NOT NULL,
+country VARCHAR(255) NOT NULL,
+number_of_rooms INT NOT NULL,
+URL VARCHAR(255)NOT NULL
+);
+```
+
+We are assuming that the state importance varies by country (US & UK)
+
+```{sql connection = my_connection}
+INSERT INTO hotel (hotel_id, floors, name, phone, street_address, city, state, zip_code, country,  number_of_rooms, URL )
+VALUES ("H1", '9', "The Palace", "+44 (0)07955321", "11 Belsize Road", "London", "Greater London", "NW3 7AL","United Kingdom", '92', 'https://www.the-place-london.uk'),
+("H2", '9', "The Castle", "+44 (0) 079955321"," 111 Kirby Corner Road", "Coventry", "Warwickshire", "CV4 7A", "United Kingdom", '90', 'https://www.the-castle-coventry.uk'),
+("H3", '7', "Westwood Hotel", "+44 (0) 7938372820", "34 Gibbet Hill Road", "Coventry", "Warwickshire", "CV4 7AL", "United Kingdom", "73", 'https://www.westwoodhotel.uk'),
+("H4", '8', "Lansdown Hotel", " +44 (0) 3872903748", "36 Lansdown Road"," Bristol", "Avon", "BS6 6NS", "United Kingdom", "80","https://www.lansdown.uk"),
+("H5", "12", "Arlington Villas","+44(0) 3727494795", "10 Arlington Villas", "Bristol", "Avon"," BS8 1AD", "United Kingdom", "120", "https://www.arlington-villas.uk")
+```
+
+```{sql connection = my_connection}
+SELECT * 
+FROM hotel
+```
+
+As we are creating a data base for revenue, we assume that the hotel is already build and open for customers. Therefore, all information should be available and we do not allow adding hotels without full information and all attributes that are specified as NOT NULL.  
+
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS room;
+```
+
+## Room entity
+```{sql connection= my_connection}
+CREATE TABLE room (
+room_id INTEGER  PRIMARY KEY AUTOINCREMENT,
+room_number VARCHAR(255) NOT NULL,
+high_floor BOOLEAN NULL,
+room_type VARCHAR NOT NULL,
+bed_number INT NULL,
+hotel_id INT NOT NULL,
+smoking BOOLEAN NULL,
+maintenance BOOLEAN NOT NULL,
+balcony BOOLEAN NULL,
+FOREIGN KEY (hotel_id) REFERENCES hotel(`hotel_id`)
+);
+```
+
+```{sql connection= my_connection}
+INSERT INTO room (room_number, high_floor, room_type, bed_number, hotel_ID, smoking, maintenance, balcony)
+VALUES("200", FALSE, "Suite", "2", "H1", FALSE, TRUE, FALSE),
+("150", FALSE, "Single", "1", "H2", FALSE, TRUE, FALSE), 
+("Presidential Suite", TRUE, "Suite", "3", "H5", TRUE, TRUE, TRUE),
+("350", FALSE, "Double", "2", "H1", FALSE, FALSE, FALSE),
+("Executive Suite", TRUE, "Suite", "2", "H3", FALSE, TRUE, TRUE),
+("Einstein Seminar Room","","Seminar Room","0", "H3", FALSE, FALSE,"" )
+```
+
+```{sql connection = my_connection}
+SELECT * 
+FROM room
+```
+## Guest Entity
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS guests;
+```
+
+```{sql connection= my_connection}
+CREATE TABLE guests (
+guest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+document_type varchar(255) NOT NULL,
+document_no varchar(50) NOT NULL,
+document_expiration varchar(50),
+cell VARCHAR(50) NULL,
+work VARCHAR(50) NULL,
+home VARCHAR(50) NULL,
+email VARCHAR(50) NULL,
+street VARCHAR(255) NOT NULL,
+city VARCHAR(255) NOT NULL,
+state VARCHAR(255) NULL,
+country VARCHAR(255) NOT NULL,
+zip_code VARCHAR(100) NOT NULL,
+first TEXT NOT NULL,
+middle TEXT NULL,
+lastname TEXT NOT NULL
+);
+```
+
+We assume that one guest will use only one document for identification purposes. We will refuse guests that show up without a proper form of identification. We use TEXT for names to be able to store very long names.
+
+```{sql connection= my_connection}
+INSERT INTO guests (document_type, document_no, document_expiration, cell, work, home, email, street, city, state, country, zip_code, first, middle, lastname)
+VALUES ('passport', 'H14005265', '2025-11-21', '5041278989', ' ', '4522547887', 'dbambra0@ameblo.us' , 'New Wales', 'Nashville', 'Tennessee', 'United States', 'TN785246', 'James', 'Darin', 'Bambra'),
+('driving licence', '2548523', '2025-01-01', '7778541245', '4521457842', ' ', 'dmccambrois1@smugmug.com', 'Gibbet Hill', 'Coventry', 'England', 'United Kingdom', 'CV7 4ER', 'Honey', 'Durand', 'McCambrois'),
+('national id', '2142357896358', '2023-08-11', '7521455757',  ' ', '5478623146', 'spaal2@gmail.com', 'Stoneleigh', 'Belfast', 'Northern Ireland', 'United Kingdom', 'BE4 2SD', 'Steffen', 'Suellen', 'Paal'),
+('passport', 'T34567818924', '2027-07-07', '4568527532', ' ', ' ', 'sbolens3@yellowbook.com', 'Daisy', 'Brussels', 'Brussels', 'Belgium', 'B66286', 'Burke', 'Siward', 'Bolens'),
+('passport', 'E784135692', '2022-12-04', '5322877475', '2126644589', ' ', 'ahmet@aksoy.com.tr', 'Yasemin', 'Istanbul', 'Istanbul', 'Turkey', '34522', 'Ahmet', 'Ali', 'Aksoy'),
+('driving licence', '178459645', '2027-04-08', '7552546352',  ' ', '5789634512', 'jdevonald5@dagondesign.com', 'Broad', 'Edinborough', 'Scotland', 'United Kingdom', 'ED1 5YH', 'Aili', 'Janel', 'Devonald'),
+('driving licence', '156478962', '2026-09-09', '7895246321', '4786932178',  ' ', 'lworld6@mail.co.uk', 'Fouzol', 'Cardiff', 'Wales', 'United Kingdom', 'CR7 1SC', 'Bronnie', 'Lea', 'World'),
+('passport', 'L10132478', '2025-12-05', '1593574562', '6564895145',  ' ', 'segiloff7@gravatar.com', 'Blumenkopf', 'Hamburg', 'Hamburg', 'Germany', 'H33915', 'Jacinthe', 'Saxon', 'Egiloff'),
+('passport', 'P1432545', '2024-09-06', '1478526589',  ' ', ' ', 'spedgrift8@buzzfeed.com', 'Privet', 'Moscow', 'Moscow', 'Russia', 'M30096', 'Bartolomeo', 'Stanislas', 'Pedgrift'),
+('passport', 'R3464894', '2028-10-10', '2486245178', '2133254562',  ' ', 'pstammirs9@google.it', 'Cafe', 'Milan', 'Milan', 'Italy', 'ML76310', 'Carolina', 'Phil', 'Stammirs')
+```
+
+```{sql connection= my_connection}
+SELECT * 
+FROM guests
+```
+Query to select historical information
+```{sql connection = my_connection}
+-- Assume today is  2020-11-08
+SELECT  c.guest_id, c.check_in_date, c.check_out_date, c.hotel_id, c.room_id, g.first, g.middle, g.lastname, g.street, g.city, g.state, g.country, g.zip_code, g.cell, g.work, g.home, g.email
+FROM check_in_info c
+INNER JOIN guests g
+USING(guest_id)
+where "2020-11-08" >= check_in_date
+```
+
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS reservation_method;
+```
+## Reservation Method entity
+```{sql connection= my_connection}
+CREATE TABLE reservation_method (
+    channel_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    method_name VARCHAR(255) NOT NULL,
+    external BOOLEAN NOT NULL,
+    booking_fee DECIMAL(2,2) NOT NULL
+    );
+```
+
+```{sql connection= my_connection}
+INSERT INTO reservation_method (method_name, external, booking_fee)
+VALUES ('booking.com', TRUE, '0.2'), ('hotels.com', TRUE, '0.17'), ('tripadvisor.com', TRUE, '0.14'), ('Direct', FALSE, '0'), ('agoda.com', TRUE, '0.15'), ('trivago.com', TRUE, '0.15'), ('travelzoo.com', TRUE, '0.12'), ('travel.com', TRUE, '0.1'), ('Kayak.com', TRUE, '0.22'), ('Priceline.com', TRUE, '0.19'), ('momondo.com',TRUE, '0.15'), ('Orbitz.com', TRUE, '0.09'), ('Hotwire.com',TRUE, '0.11'), ('American Express Travel', TRUE, '0.3'), ('Google hotel finder', TRUE, '0.12')
+```
+
+```{sql connection= my_connection}
+SELECT * 
+FROM reservation_method
+```
+
+```{sql connection = my_connection}
+SELECT method_name, external
+FROM reservation_method
+WHERE external = TRUE
+```
+
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS reservation;
+```
+
+## Reservation entity
+```{sql connection= my_connection}
+CREATE TABLE reservation (
+    reservation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    est_arrival_date DATE NOT NULL,
+    est_departure_date DATE NOT NULL,
+    card_number CHAR(16) NOT NULL,
+    card_expiration DATE NOT NULL,
+    amount_rooms INT DEFAULT 1,
+    price INT NOT NULL,
+    bed_number INT NOT NULL,
+    additional_services TEXT NULL,
+    room_type VARCHAR NULL,
+    smoke BOOLEAN NOT NULL,
+    high_floor BOOLEAN NULL,
+    balcony BOOLEAN NULL,
+    hotel_id VARCHAR(50) NOT NULL,
+    channel_id INTEGER NOT NULL,
+    FOREIGN KEY (hotel_id) REFERENCES hotel(hotel_id), 
+    FOREIGN KEY (channel_id) REFERENCES reservation_method(channel_id)
+    );
+```
+
+We will use the first of the month for card_expiration always. We assume that all further restrictions are handled by the booking services.
+
+```{sql connection= my_connection}
+INSERT INTO reservation (est_arrival_date, est_departure_date, card_number, card_expiration, amount_rooms, price, bed_number,    additional_services,room_type, smoke, high_floor, balcony, hotel_id, channel_id)
+VALUES
+('2020-11-06', '2020-11-07', '3742885837672140', '2022-01-01', '1', '200', '1', "Breakfast","Suite",FALSE, TRUE, FALSE, 'H1', '1'), 
+('2020-11-07', '2020-11-10', '3557162486807420', '2025-05-01', '1', '165', '2',"SPA","Single", FALSE, FALSE, FALSE, 'H2', '2'), 
+('2020-11-09', '2020-11-11', '3580159259721570', '2023-12-01', '1', '170', '2',"Bar","Double", TRUE, TRUE, TRUE,  'H3', '3'), 
+('2020-11-11', '2020-11-13', '2018218612241250', '2024-11-01', '1', '90',	'1',"","Single", TRUE, FALSE, TRUE, 'H4', '4'), 
+('2020-10-29', '2020-11-01', '5602241259403700', '2022-01-01', '1', '180', '3', "","Suite",TRUE, TRUE, TRUE, 'H3', '5'), 
+('2020-11-09', '2020-11-12', '4102232443303040', '2022-05-01', '1', '250', '1',"SPA","Suite", TRUE, FALSE, TRUE, 'H1', '6'), 
+('2020-11-07', '2020-11-10', '9449088987140000', '2022-06-01', '1', '110', '2',"Breakfast","Single", FALSE, TRUE, FALSE, 'H2', '7'),
+('2020-11-04', '2020-11-05', '4844526297259470', '2023-08-01', '1', '150', '3',"","Double", FALSE, FALSE, FALSE, 'H3', '8'), 
+('2020-11-01', '2020-11-04', '2719047610465000', '2026-11-01', '1', '240', '3',"Bar","Suite", FALSE, TRUE, FALSE,  'H4', '9'), 
+('2020-11-04', '2020-11-05', '6201667373467110', '2022-12-01', '1', '80', '1',"","Single", FALSE, FALSE, FALSE,  'H5', '10'),
+('2020-06-07', '2020-06-30', '6201662341267113', '12/01/2022', '1', '100', '1',"","Double", FALSE, FALSE, FALSE, 'H5', '10'),
+('2020-03-02', '2020-06-22', '6201662341267113', '12/01/2022', '1', '250', '1',"SPA","Suite", FALSE, FALSE, FALSE, 'H2', '1'),
+('2020-06-25', '2020-07-09', '6201662341267113', '12/01/2022', '1', '80', '1',"","Single", FALSE, FALSE, FALSE, 'H1', '9')
+;
+```
+
+```{sql connection = my_connection}
+SELECT *
+FROM reservation
+```
+Query to delete past reservations 
+```{sql connection = my_connection}
+-- assume today is 2020-11-01
+DELETE FROM reservation 
+WHERE reservation_id IN
+(SELECT r.reservation_id FROM reservation AS r,
+(SELECT * FROM reservation, 
+(SELECT c.check_in_date, g.guest_id, gr.reservation_id
+FROM check_in_info c
+INNER JOIN guests g
+USING (guest_id) 
+INNER JOIN guest_reservation gr
+USING (guest_id)
+INNER JOIN reservation 
+using (reservation_id)
+WHERE "2020-11-01" >= check_in_date) AS subquery
+WHERE subquery.reservation_id = reservation.reservation_id) AS subquery2
+WHERE subquery2.reservation_id= r.reservation_id)
+```
+
+Query to show number of rooms available in each hotel on a selected date
+```{sql connection = my_connection}
+-- assume today is 2020-11-01
+SELECT r.hotel_id, r.est_arrival_date, r.est_departure_date ,sum(r.amount_rooms) AS occupied_rooms, (h.number_of_rooms-sum(r.amount_rooms)) AS available_rooms
+FROM reservation r
+INNER JOIN hotel h
+USING(hotel_id)
+WHERE r.est_arrival_date <= "2020-11-01" AND r.est_departure_date >= "2020-11-01"
+GROUP BY r.hotel_id
+```
+
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS type_of_charge;
+```
+## Type of charge entity
+```{sql connection= my_connection}
+CREATE TABLE type_of_charge (
+type_of_charge_id INTEGER PRIMARY KEY AUTOINCREMENT,
+charge_name VARCHAR(255) NOT NULL, 
+country VARCHAR (255) NOT NULL, 
+tax INTEGER NOT NULL
+);
+```
+
+```{sql connection = my_connection}
+-- Creating information for the type_of_charge
+INSERT INTO type_of_charge (charge_name, country, tax)
+VALUES ('room', 'United Kingdom', .1), 
+('mini bar', 'United Kingdom', .05), 
+('extra cleaning', 'United Kingdom', .02), 
+('restaurant', 'United Kingdom', .12), 
+('bar', 'United Kingdom', .12), 
+('hotel cafe', 'United Kingdom', .09), 
+('spa', 'United Kingdom', .10), 
+('gift shop', 'United Kingdom', .8), 
+('payment', 'United Kingdom', .7), 
+('seminar room', 'United Kingdom', .9), 
+('dinning room', 'United Kingdom', .6), 
+('breakfast', 'United Kingdom', .4), 
+('banquet room', 'United Kingdom', .6), 
+('rental services', 'United Kingdom', .3);
+```
+
+```{sql connection = my_connection}
+SELECT * 
+FROM type_of_charge;
+```
+
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS charges;
+```
+## Charges entity
+```{sql connection= my_connection}
+CREATE TABLE charges (
+charge_id INTEGER PRIMARY KEY AUTOINCREMENT,
+amount NUMERIC NOT NULL,
+date DATE NOT NULL,
+type_of_charge_id INT NOT NULL,
+guest_id INT NOT NULL,
+invoice_id INT NOT NULL,
+hotel_id VARCHAR (50) NOT NULL,
+FOREIGN KEY (guest_id) REFERENCES guests (guest_id),
+FOREIGN KEY (invoice_id) REFERENCES invoice (invoice_id),
+FOREIGN KEY (type_of_charge_id) REFERENCES type_of_charge(type_of_charge_id),
+FOREIGN KEY (hotel_id) REFERENCES hotel (hotel_id)
+);
+```
+
+```{sql connection = my_connection}
+-- Inserting information for charges
+INSERT INTO charges (amount, date, type_of_charge_id, guest_id, invoice_id, hotel_id)
+VALUES 
+('2500', '2000-01-01', '1', '1', '1', 'H1'),
+('100', '2020-11-10', '1', '1', '1', 'H1'),
+('50', '2020-11-11', '5', '3', '2', 'H3'),
+('75', '2020-11-13', '6', '4', '3', 'H4'),
+('10', '2020-11-01', '5', '5', '4', 'H5'),
+('60', '2020-11-05', '5', '7', '5', 'H2'),
+('100', '2020-11-04', '5', '7', '5', 'H2'),
+('200', '2020-11-10', '5', '1', '1', 'H1'),
+('-290', '2020-11-13', '9', '1', '1', 'H1'),
+('900', '2020-09-13', '5', '1', '1', 'H1')
+```
+
+```{sql connection = my_connection}
+SELECT * 
+FROM charges
+```
+## Query to calculate the tax rate and amount to be paid related to individual charges
+Tax rates query
+```{sql connection = my_connection}
+SELECT c.amount, (c.amount * t.tax) AS tax_amount, ((c.amount * t.tax)+c.amount) AS Total, t.type_of_charge_id
+FROM charges AS c
+INNER JOIN type_of_charge AS t
+USING (type_of_charge_id)
+WHERE t.type_of_charge_id != 9
+```
+Invoice Union Query
+```{sql connection = my_connection}
+SELECT c.invoice_id, c.charge_id, t.charge_name, c.amount
+FROM charges AS c
+INNER JOIN type_of_charge AS t
+USING (type_of_charge_id)
+--ON type_of_charge = type_of_charge_id
+WHERE c.invoice_id = 1
+UNION
+SELECT c.invoice_id, c.charge_id, t.charge_name, SUM(c.amount)
+FROM charges AS c
+INNER JOIN type_of_charge AS t
+USING (type_of_charge_id)
+--ON type_of_charge = type_of_charge_id
+WHERE c.invoice_id = 1
+GROUP BY c.invoice_id
+```
+
+```{sql connection = my_connection}
+SELECT c.invoice_id, c.charge_id, t.charge_name, SUM(c.amount)
+FROM charges AS c
+INNER JOIN type_of_charge AS t
+USING (type_of_charge_id)
+--ON type_of_charge = type_of_charge_id
+WHERE c.invoice_id = 1
+GROUP BY c.invoice_id
+```
+
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS invoices;
+```
+## Invoice entity
+```{sql connection= my_connection}
+CREATE TABLE invoices (
+invoice_id INTEGER PRIMARY KEY AUTOINCREMENT,
+date DATE NOT NULL,
+guest_id INTEGER NOT NULL,
+FOREIGN KEY (guest_id) REFERENCES guests (guest_id)
+);
+```
+
+```{sql connection = my_connection}
+-- Inserting information for invoices
+INSERT INTO invoices (date, guest_id)
+VALUES
+( '2020-11-14', '1'),
+( '2020-11-12', '2'),
+( '2020-11-15', '3'),
+( '2020-11-02', '4'),
+( '2020-11-06', '5'),
+( '2019-11-06', '6'),
+( '2019-11-06', '7'),
+( '2019-11-06', '9'),
+( '2019-10-06', '10'),
+( '2019-11-06', '11'),
+( '2019-11-06', '13'),
+( '2019-11-06', '5'),
+( '2019-11-06', '9');
+```
+
+```{sql connection = my_connection}
+SELECT * 
+FROM invoices;
+```
+
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS check_in_info;
+```
+## Check-in info entity
+```{sql connection= my_connection}
+CREATE TABLE check_in_info ( 
+check_in_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+room_id INTEGER NOT NULL, 
+hotel_id VARCHAR(50) NOT NULL, 
+guest_id INTEGER NOT NULL, 
+check_in_date DATE NOT NULL, 
+check_out_date DATE NOT NULL,
+card_number VARCHAR (16) NOT NULL,
+card_expiration DATE NOT NULL,
+FOREIGN KEY (guest_id) REFERENCES guests (guest_id),
+FOREIGN KEY (hotel_id) REFERENCES hotel (hotel_id),
+FOREIGN KEY (room_id) REFERENCES room (room_id)
+);
+```
+
+```{sql connection = my_connection}
+INSERT INTO check_in_info (room_id, hotel_id, guest_id, check_in_date, check_out_date, card_number, card_expiration)
+VALUES 
+('1', 'H1', '1', '2020-11-06', '2020-11-07', '3742885837672140', '2022-01-01'),
+('2', 'H2', '2', '2020-11-07', '2020-11-19', '3557162486807420', '2025-05-01'),
+('3', 'H3', '3', '2020-11-09', '2020-11-11', '3580159259721570', '2023-12-01'),
+('4', 'H4', '4', '2020-11-11', '2020-11-13', '2018218612241250', '2024-11-01'),
+('5', 'H5', '5', '2020-10-29', '2020-11-01', '5602241259403700', '2022-01-01'),
+('1', 'H1', '6', '2020-11-09', '2020-11-12', '4102232443303040', '2022-05-01'),
+('2', 'H2', '7', '2020-11-07', '2020-11-10', '9449088987140000', '2022-06-01' ),
+('3', 'H3', '8', '2020-11-04', '2020-11-05', '4844526297259470', '2023-08-01'),
+('4', 'H4', '9', '2020-11-01', '2020-11-04', '2719047610465000', '2026-11-01'),
+('5', 'H5', '10', '2020-11-04', '2020-11-05', '6201667373467110', '2022-12-01');
+```
+
+```{sql connection = my_connection}
+SELECT * 
+FROM check_in_info
+```
+
+```{sql connection = my_connection}
+DROP TABLE IF EXISTS guest_reservation;
+```
+## Guest reservation entity
+
+```{sql connection = my_connection}
+CREATE TABLE guest_reservation (
+guest_id INTEGER NOT NULL,
+reservation_id INTEGER NOT NULL,
+PRIMARY KEY (guest_id, reservation_id),
+FOREIGN KEY (guest_id) REFERENCES guests,
+FOREIGN KEY (reservation_id) REFERENCES reservation
+);
+```
+
+
+```{sql connection = my_connection}
+INSERT INTO guest_reservation (guest_id, reservation_id)
+VALUES
+(1, 1), 
+(1, 3), 
+(2, 2), 
+(2, 4), 
+(2, 5), 
+(3, 3), 
+(4, 4), 
+(5, 5), 
+(6, 6), 
+(7, 7), 
+(8, 8), 
+(9, 9), 
+(10, 10), 
+(11, 4), 
+(12, 2), 
+(13, 1); 
+```
+
+Select all reservation and group by guests in order to find out how many guests there are for each reservation
+
+```{sql connection = my_connection}
+SELECT * FROM guest_reservation
+```
+We assume that each room needs a separate check-in. If one reservation is made for many rooms, we will still have one check in for one room.
+
+The invoice amount printed on the actual invoice will be calculated via a query. 
+
+# Queries
+
+## Query 1
+
+*The total spent for the customer for a particular stay (checkout invoice).
+
+```{sql connection = my_connection}
+SELECT c.guest_id, c.invoice_id, SUM(c.amount) AS outstanding_amount, SUM(CASE WHEN c.type_of_charge_id != 9 THEN c.amount END) AS total_invoice_amount
+FROM charges as c
+LEFT JOIN invoices as i
+USING(invoice_id)
+GROUP BY invoice_id;
+--excluding payment with '9'
+```
+
+# Query 2
+
+## Query 2(a)
+The most valuable customers in (a) the last two months:
+
+```{sql connection=my_connection}
+SELECT guest_id,  SUM(CASE WHEN type_of_charge_id != 9 THEN amount END) AS total_customer_revenue
+FROM charges as c
+where date between datetime('now', '-1 month') AND datetime('now')    --datetime('now') AND datetime('now', '-1 month')
+GROUP BY guest_id
+ORDER BY total_customer_revenue DESC;
+--excluding payment with '9'
+```
+## Query 2(b)
+
+The most valuable customers in the (b) past year:
+```{sql connection=my_connection}
+SELECT guest_id,  SUM(CASE WHEN type_of_charge_id != 9 THEN amount END) AS total_customer_revenue
+FROM charges
+where date between datetime('now', '-1 year') AND datetime('now')    --datetime('now') AND datetime('now', '-1 month')
+GROUP BY guest_id
+ORDER BY  total_customer_revenue DESC;
+--excluding payment with '9'
+```
+## Query 2(c)
+The most valuable customers from the beginning of the records:
+
+```{sql connection=my_connection}
+SELECT guest_id,  SUM(CASE WHEN type_of_charge_id != 9 THEN amount END) AS total_revenue
+FROM charges 
+GROUP BY guest_id
+ORDER BY total_revenue DESC;
+--excluding payment with '9'
+```
+
+
+# Query 3 
+Which are the top countries where our customers come from ?
+
+The most valuable customers from the beginning of the records by country:
+```{sql connection=my_connection}
+SELECT c.guest_id,  SUM(CASE WHEN c.type_of_charge_id != 9 THEN amount END) AS total_revenue, g.country
+FROM charges AS c
+INNER JOIN guests as g
+USING(guest_id)
+GROUP BY c.guest_id
+ORDER BY total_revenue DESC;
+--excluding payment with '9'
+```
+
+# Query 4
+How much did the hotel pay in referral fees for each of the platforms that we have contracted with?
+
+```{sql connection = my_connection}
+SELECT method_name AS platform, sum(price), booking_fee AS percentage, sum(price*booking_fee) AS fee
+FROM reservation
+INNER JOIN reservation_method AS m
+USING(channel_id)
+WHERE channel_id != 4 --not internal
+GROUP BY channel_id
+```
+# Query 5
+What is the utilization rate for each hotel (that is the average billable days of a hotel
+
+```{sql connection = my_connection}
+SELECT c.hotel_id, SUM(julianday(c.check_out_date) - julianday(c.check_in_date)) AS Nights, SUM(((julianday(c.check_out_date) - julianday(c.check_in_date))/ (365* h.number_of_rooms)))*100 AS Percentage_Utilization
+FROM check_in_info AS c
+INNER jOIN hotel AS h
+USING (hotel_id)
+GROUP BY (hotel_id)
+```
+#Query 6
+Calculate the Customer Value in terms of total spent for each customer before the current booking. 
+
+```{sql connection = my_connection}
+SELECT c.guest_id, sum(c.amount) as Consumer_Value
+FROM charges AS c
+INNER JOIN check_in_info AS i
+USING (guest_id)
+WHERE c.type_of_charge_id != 9 
+GROUP BY c.guest_id
+--excluding payment with '9'
+```
+
+```{r}
+RSQLite::dbDisconnect(my_connection)
+```
+
+
+

@@ -1,0 +1,83 @@
+---
+title: "hygiene_web_scraping"
+author: "Group 8"
+date: "8/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part C
+
+
+
+https://www.tutorialspoint.com/r/r_xml_files.htm
+
+
+Link in Assignment:
+
+https://www.food.gov.uk/uk-food-hygiene-rating-data-api
+
+Downloadable Data
+
+https://data.food.gov.uk/catalog/datasets/38dd8d6a-5ab1-4f50-b753-ab33288e3200
+
+Aberdeen:
+
+
+```{r}
+library(XML)
+library(xml2)
+library(rvest)
+library(dplyr)
+library(plyr)
+```
+
+```{r}
+#read html
+webpage <- "https://data.food.gov.uk/catalog/datasets/38dd8d6a-5ab1-4f50-b753-ab33288e3200"
+food_page <- read_html(webpage)
+```
+
+
+
+```{r}
+food_page %>% html_nodes(".o-dataset-distribution--link") %>% html_attr("href") %>% as.vector()  -> url_data
+```
+
+
+
+```{r}
+xmlList %>% xml_nodes("EstablishmentCollection$EstablishmentDetail")
+```
+
+```{r}
+#loop through all webpages and parse data
+download_data <- url_data[-1]
+food_data_frame <- data.frame()
+for (i in 1:length(download_data)){
+read_page <- read_xml(download_data[i])
+page <- xmlParse(read_page)
+df <- xmlToDataFrame(node=getNodeSet(page, "//EstablishmentDetail"))
+geo <- xmlToDataFrame(node=getNodeSet(page, "//Geocode"))
+df <- cbind(df, geo)
+#print(paste0("File number: ", i))
+# print(colnames(df))
+food_data_frame <- rbind.fill(food_data_frame, df)
+  
+}
+```
+
+
+```{r}
+saveRDS(food_data_frame, file ="Part_C.rds")
+```
+
+
+```{r}
+#write.csv(food_data_frame,file="Part_C.csv")
+```
+
+

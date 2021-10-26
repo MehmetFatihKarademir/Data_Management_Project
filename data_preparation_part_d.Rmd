@@ -1,0 +1,69 @@
+---
+title: "data_prep_part_d"
+author: "Group 8"
+date: "12/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(leaflet)
+library(mapdeck)
+```
+
+## Preparing the data Rshiny
+```{r}
+Part_C2 <- readRDS("Part_C2.rds") #Reading in data created in Part C
+#Consolidating 'Awaiting Inspection', 'AwaitingInspection', 'Awaiting Publication' and ' AwaitingPublication into 'Awaiting', and 'Pass and Eat Safe' and 'Pass' into 'Pass'
+plotting_data <- Part_C2 %>%  mutate(Rating_Value_updated = ifelse(RatingValue == "Pass" | RatingValue ==  "Pass and Eat Safe","Pass", ifelse(str_detect(RatingValue, "Awaiting"), "Awaiting", RatingValue)), Rating_value_numeric = as.numeric(Rating_Value_updated), Rating_value_categorie = ifelse(is.na(Rating_value_numeric), "Other", "Sticker Rating"))
+
+plotting_data <- plotting_data %>% drop_na(Longitude) #Creating data to plot in Leaflet by removing missing longitude and latitudes
+```
+
+## Creating color palett for variable 'rating_value_updated' and saving leaflet map in RDS format
+```{r}
+# pal <- colorFactor( #Assigning a new color to each unique observation in Rating_Value_updated
+#       palette = colorRampPalette(rainbow(10))(length(plotting_data$Rating_Value_updated)), 
+#       domain = plotting_data$Rating_Value_updated)
+# 
+# map1 <- leaflet::leaflet(plotting_data)%>% #Leaflet map to output goecode data
+#      addTiles() %>%  
+#      addCircleMarkers(
+#          lng = plotting_data$Longitude,
+#          lat = plotting_data$Latitude,
+#          label = plotting_data$BusinessName,
+#          color = ~pal(Rating_Value_updated),
+#          stroke = FALSE,
+#          fillOpacity = 0.75,
+#          radius = 5) %>% 
+#      addLegend("bottomright", pal = pal, values = ~Rating_Value_updated,
+#                title = "Rating")
+# saveRDS(map1, "map.rds") #Saving map as an RDS
+# map2 <- readRDS("map.rds") #Creating variable to read in saved RDS leaflet map
+```
+
+```{r}
+key <- 'pk.eyJ1IjoiZ3JhaGFtY2hhbGZhbnQiLCJhIjoiY2tzZW5obDhpMTI4cjJ1b2FlbzV2cnhsdyJ9.hxp0ggBSsxmcDACtWgk9zw'
+
+( map3 <- mapdeck(token = key, style = mapdeck_style("light"), pitch = 45) %>%
+  add_hexagon(
+    data = plotting_data
+    , lat = 'Latitude'
+    , lon = 'Longitude'
+    , layer_id = "hex_layer"
+    , elevation_scale = 100
+    , colour_range = colourvalues::colour_values(1:6, palette = colourvalues::get_palette("viridis")[70:256,])
+  )  )
+
+
+```
+
+
+
+
+
+Sources 
+Source for legend https://stackoverflow.com/questions/50354112/classifying-circle-markers-by-color-in-leaflet-r-and-adding-legend
+Source for leaflet: Data Camp source https://campus.datacamp.com/courses/building-dashboards-with-shinydashboard/case-study-9b510629-0d41-4819-9b81-0f51d84a695c?ex=4
+
